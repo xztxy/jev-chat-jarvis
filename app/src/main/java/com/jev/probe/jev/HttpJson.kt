@@ -54,6 +54,7 @@ object HttpJson {
         route: String,
         extraHeaders: Map<String, String> = emptyMap()
     ): JSONObject {
+        val original = body
         val payload = JSONObject(body.toString())
         if (payload.has("messages")) {
             payload.remove("temperature")
@@ -99,7 +100,7 @@ object HttpJson {
                 val text = readBody(conn.inputStream)
                 if (text.isBlank()) throw ApiException(route, code, "响应体为空")
                 val result = JSONObject(text)
-                if (body.has("messages")) {
+                if (original.has("messages")) {
                     val message = result.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")
                     val content = message?.opt("content")
                     val output = StringBuilder()
