@@ -54,9 +54,9 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         val legacyK = sp.getString(K_LEGACY_KEY, "") ?: ""
         if (judgeK.isNotBlank() || legacyK.isNotBlank()) return
         sp.edit()
-            .putString(K_JUDGE_PROVIDER, PROVIDER_BOCHA)
-            .putString(K_JUDGE_BASE, DEFAULT_JUDGE_BASE_BOCHA)
-            .putString(K_JUDGE_MODEL, DEFAULT_JUDGE_MODEL_BOCHA)
+            .putString(K_JUDGE_PROVIDER, PROVIDER_OPENAI)
+            .putString(K_JUDGE_BASE, DEFAULT_JUDGE_BASE_OPENAI)
+            .putString(K_JUDGE_MODEL, DEFAULT_JUDGE_MODEL_OPENAI)
             .apply()
         Log.i(TAG, "prefs seeded bocha defaults (fresh install)")
     }
@@ -65,7 +65,12 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
 
     /** "bocha" | "openrouter" | "typesafe" | "custom". */
     var judgeProvider: String
-        get() = sp.getString(K_JUDGE_PROVIDER, PROVIDER_OPENROUTER) ?: PROVIDER_OPENROUTER
+        get() {
+            val base = judgeBaseUrl.trim().trimEnd('/')
+            if (base !in setOf(DEFAULT_JUDGE_BASE_BOCHA, DEFAULT_JUDGE_BASE_TYPESAFE, DEFAULT_JUDGE_BASE_OPENROUTER) &&
+                !base.endsWith("/systemone") && !base.endsWith("/decisions")) return PROVIDER_OPENAI
+            return sp.getString(K_JUDGE_PROVIDER, PROVIDER_OPENAI) ?: PROVIDER_OPENAI
+        }
         set(v) = sp.edit().putString(K_JUDGE_PROVIDER, v.trim()).apply()
 
     /** Host root; the path is appended per provider (see [judgeEndpoint]). */
@@ -218,7 +223,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
     fun judgeEndpoint(): String {
         val base = judgeBaseUrl.trim().trimEnd('/')
         return when (judgeProvider) {
-            PROVIDER_OPENAI -> "${base.removeSuffix("/chat/completions")}/chat/completions"
+            PROVIDER_OPENAI -> com.jev.probe.jev.ApiUrls.chat(base)
             PROVIDER_BOCHA -> "$base/v1/systemone"    // same path as TypeSafe
             PROVIDER_TYPESAFE -> "$base/v1/systemone"
             PROVIDER_CUSTOM -> judgeBaseUrl.trim()   // user supplies the full URL
@@ -227,12 +232,12 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
     }
 
     /** Full POST URL for the OpenAI-compatible chat completions call. */
-    fun replyEndpoint(): String = "${replyBaseUrl.trim().trimEnd('/')}/chat/completions"
+    fun replyEndpoint(): String = com.jev.probe.jev.ApiUrls.chat(replyBaseUrl)
 
     /** Same shape as [replyEndpoint]; blank falls back to the OpenRouter default. */
     fun visionEndpoint(): String {
         val base = visionBaseUrl.trim().ifBlank { DEFAULT_VISION_BASE }
-        return "${base.trimEnd('/')}/chat/completions"
+        return com.jev.probe.jev.ApiUrls.chat(base)
     }
 
     fun isAllowed(title: String?): Boolean {

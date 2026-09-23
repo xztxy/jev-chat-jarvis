@@ -48,7 +48,7 @@ open class ChatCaptureService : AccessibilityService() {
      *  disabled and handled by a short-circuit notice instead of an adapter (see
      *  [maybeCapture] / [onAccessibilityEvent]). [WeChatAdapter] is kept in the
      *  codebase for a possible future restore, just not used here. */
-    private val adapters = listOf(QQAdapter(), XAdapter(), FeishuAdapter()).associateBy { it.pkg }
+    private val adapters = listOf(WeChatAdapter(), QQAdapter(), XAdapter(), FeishuAdapter()).associateBy { it.pkg }
 
     /** Submit to the worker, ignoring rejection after the service is torn down
      *  (a stale overlay callback must never crash the process). */
@@ -152,7 +152,7 @@ open class ChatCaptureService : AccessibilityService() {
             // WeChat is fully disabled: never read/screenshot/OCR/fill here, only
             // show the one-time "not supported" notice and stop. Checked before the
             // generic no-adapter branch because WeChat is no longer in `adapters`.
-            if (fg == PKG_WECHAT) { foregroundPkg = fg; showWeChatDisabled(auto = true); return }
+            if (fg != null) foregroundPkg = fg
             if (fg != null && fg !in adapters) {
                 foregroundPkg = fg
                 wechatNoticeShown = false // left WeChat → allow the notice again next visit
@@ -178,7 +178,7 @@ open class ChatCaptureService : AccessibilityService() {
         // WeChat is fully disabled — no tree read, no screenshot, no OCR, no fill.
         // A content-changed / scrolled event in WeChat only re-shows the one-time
         // notice (deduped); it must never reach an adapter or the OCR path.
-        if (pkg == PKG_WECHAT) { showWeChatDisabled(auto = true); return }
+        // WeChat follows the normal adapter path; hidden nodes are not bypassed.
         wechatNoticeShown = false // any other foreground → allow the notice again next WeChat visit
         // Apps with no adapter are never handled automatically (v1.3 revision):
         // the only way in for them is the bubble menu's "截屏识别一次".
@@ -203,6 +203,10 @@ open class ChatCaptureService : AccessibilityService() {
             // still has something to tap when OCR is off, deduped, or comes back
             // empty — previously all three cases left the screen with no bubble.
             if (overlay?.isShowing() != true) main.post { overlay?.showIdle(snapshot.title) }
+            if (pkg == PKG_WECHAT) {
+                main.post { overlay?.showNotice("微信未提供可读消息。可长按悬浮球选择手动截屏识别；若系统禁止截图则无法读取。") }
+                return
+            }
             if (prefs.ocrFallback) {
                 // Gate BEFORE the shot, not after the OCR. Feishu's tree is empty
                 // on every content-changed event, and a successful shot resets the
@@ -342,7 +346,7 @@ open class ChatCaptureService : AccessibilityService() {
         val pkg = root?.packageName?.toString() ?: foregroundPkg ?: activePkg ?: ""
         // WeChat is fully disabled: a manual "截屏识别一次" in WeChat must NOT take
         // a screenshot — just show the notice (a manual tap always shows it).
-        if (pkg == PKG_WECHAT) { showWeChatDisabled(auto = false); return }
+        // System takeScreenshot restrictions remain enforced by ScreenCapture.
         // Top bar text, if this app has one we can read; else the first OCR line.
         val title = root?.let {
             findTitleInActionBar(it, Int.MAX_VALUE, resources.displayMetrics.widthPixels, resources, 0.15, 0.85)

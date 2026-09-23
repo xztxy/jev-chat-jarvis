@@ -54,6 +54,15 @@ object HttpJson {
         route: String,
         extraHeaders: Map<String, String> = emptyMap()
     ): JSONObject {
+        val payload = JSONObject(body.toString())
+        if (payload.has("messages")) {
+            payload.remove("temperature")
+            payload.put("stream", false)
+            if (url.endsWith("/responses")) {
+                payload.put("input", payload.getJSONArray("messages"))
+                payload.remove("messages")
+            }
+        }
         var attempt = 0
         var last: ApiException? = null
         while (attempt < MAX_ATTEMPTS) {
@@ -62,13 +71,14 @@ object HttpJson {
                 conn = (URL(url).openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
                     connectTimeout = 15000
-                    readTimeout = 40000
+                    readTimeout = 180000
+                    instanceFollowRedirects = false
                     doOutput = true
                     setRequestProperty("Authorization", "Bearer $key")
                     setRequestProperty("Content-Type", "application/json; charset=utf-8")
                     extraHeaders.forEach { (k, v) -> setRequestProperty(k, v) }
                 }
-                val bytes = body.toString().toByteArray(Charsets.UTF_8)
+                val bytes = payload.toString().toByteArray(Charsets.UTF_8)
                 conn.outputStream.use { os: OutputStream -> os.write(bytes) }
                 val code = conn.responseCode
                 if (code == 429 || code == 529) {
@@ -88,7 +98,28 @@ object HttpJson {
                 }
                 val text = readBody(conn.inputStream)
                 if (text.isBlank()) throw ApiException(route, code, "响应体为空")
-                return JSONObject(text)
+                val result = JSONObject(text)
+                if (body.has("messages")) {
+                    val message = result.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")
+                    val content = message?.opt("content")
+                    val output = StringBuilder()
+                    if (content is String) output.append(content)
+                    if (content is org.json.JSONArray) for (i in 0 until content.length()) {
+                        output.append(content.optJSONObject(i)?.optString("text", "") ?: "")
+                    }
+                    result.optJSONArray("output")?.let { blocks ->
+                        for (i in 0 until blocks.length()) {
+                            val parts = blocks.optJSONObject(i)?.optJSONArray("content") ?: continue
+                            for (j in 0 until parts.length()) {
+                                val part = parts.optJSONObject(j) ?: continue
+                                if (part.optString("type") == "output_text") output.append(part.optString("text"))
+                            }
+                        }
+                    }
+                    if (output.isBlank()) throw ApiException(route, code, "模型未返回文本：请确认模型支持当前协议及输入类型")
+                    result.put("choices", org.json.JSONArray().put(JSONObject().put("message", JSONObject().put("content", output.toString()))))
+                }
+                return result
             } catch (e: ApiException) {
                 if (e.status != null && e.status in 400..499) throw e  // client error: no retry
                 last = e
@@ -148,14 +179,8 @@ object HttpJson {
      * Returns a sorted list of model ID strings.
      */
     fun fetchModels(baseUrl: String, key: String, route: String = Route.REPLY): List<String> {
-        val cleanBase = baseUrl.trim().trimEnd('/')
-            .removeSuffix("/chat/completions")
-            .removeSuffix("/chat")
-        val endpoints = if (cleanBase.endsWith("/v1")) {
-            listOf("$cleanBase/models", cleanBase.removeSuffix("/v1") + "/models")
-        } else {
-            listOf("$cleanBase/models", "$cleanBase/v1/models")
-        }
+        val cleanBase = ApiUrls.base(baseUrl)
+        val endpoints = listOf("$cleanBase/models")
 
         var lastEx: Exception? = null
         for (ep in endpoints) {

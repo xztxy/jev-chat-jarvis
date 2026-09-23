@@ -286,6 +286,13 @@ class SettingsActivity : AppCompatActivity() {
         })
         visionCard.addView(visionResult)
         root.addView(visionCard)
+        root.addView(text("自定义地址使用标准聊天协议。根域名默认补 /v1；无 /v1 网关请填完整 /chat/completions 地址。仅支持 Responses 的模型请填完整 /responses 地址。模型列表不保证每个模型都支持聊天或图片。", 12f, sub))
+        root.addView(cardBtn("将判断接口的地址、密钥、模型复制到回复接口") {
+            replyBaseEdit.setText(judgeBaseEdit.text.toString())
+            replyKeyEdit.setText(judgeKeyEdit.text.toString())
+            replyModelEdit.setText(judgeModelEdit.text.toString())
+            Toast.makeText(this, "已复制，请测试回复后保存全部设置", Toast.LENGTH_SHORT).show()
+        })
 
         // =================== 分析 ===================
         root.addView(section("分析"))
@@ -449,7 +456,7 @@ class SettingsActivity : AppCompatActivity() {
             Prefs.DEFAULT_JUDGE_BASE_BOCHA -> Prefs.PROVIDER_BOCHA
             Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> Prefs.PROVIDER_OPENROUTER
             Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> Prefs.PROVIDER_TYPESAFE
-            else -> providerOf(idx)
+            else -> Prefs.PROVIDER_OPENAI
         }
 
     /** The full endpoint a preset host would have been expanded to. */

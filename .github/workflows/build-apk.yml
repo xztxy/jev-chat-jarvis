@@ -40,7 +40,7 @@ jobs:
       - name: Build Debug APK
         run: |
           set -o pipefail
-          ./gradlew assembleDebug -x lint -x test --no-daemon --stacktrace 2>&1 | tee build-output.log
+          ./gradlew testDebugUnitTest assembleDebug --no-daemon --stacktrace 2>&1 | tee build-output.log
 
       - name: Push Error Log on Failure
         if: failure()
@@ -64,7 +64,6 @@ jobs:
           retention-days: 7
 
       - name: Build Release APK
-        continue-on-error: true
         run: |
           ./gradlew assembleRelease -x lint -x test --no-daemon --stacktrace
 
