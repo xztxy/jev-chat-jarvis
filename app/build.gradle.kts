@@ -1,5 +1,6 @@
 import java.io.File
 import java.io.FileInputStream
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -23,12 +24,25 @@ android {
     namespace = "com.jev.probe"
     compileSdk = 35
 
+    // Fixed signing key so every build carries the SAME signature and new versions
+    // install over old ones. Sources, in order:
+    //   1. JEV_KEYSTORE_PROPS (external properties file, original mechanism)
+    //   2. ANDROID_KEYSTORE_BASE64 (CI secret, decoded to a temp file)
+    //   3. keystore/jev-release.jks committed in this repo
+    // Source 3 is a convenience for this personal fork only: the key is public, so
+    // re-key through source 2 before distributing to anyone else.
+    val ciKeystore = File(System.getenv("RUNNER_TEMP") ?: "/tmp", "ci-release.jks")
+    val keystoreB64 = System.getenv("ANDROID_KEYSTORE_BASE64")
+    if (!keystoreB64.isNullOrBlank()) {
+        ciKeystore.writeBytes(Base64.getDecoder().decode(keystoreB64.trim()))
+    }
+
     defaultConfig {
         applicationId = "com.jev.probe"
         minSdk = 30
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.4.2-custom"
+        versionCode = 8
+        versionName = "1.4.3-custom"
 
         // ML Kit's bundled Chinese recognizer ships native libs for every ABI.
         // The target phone (and every phone this can run on: minSdk 30) is
@@ -39,12 +53,19 @@ android {
     }
 
     signingConfigs {
-        if (releaseProps.isNotEmpty()) {
+        val repoKeystore = rootProject.file("keystore/jev-release.jks")
+        val store = when {
+            releaseProps.isNotEmpty() -> file(releaseProps.getProperty("storeFile"))
+            !keystoreB64.isNullOrBlank() && ciKeystore.exists() -> ciKeystore
+            repoKeystore.exists() -> repoKeystore
+            else -> null
+        }
+        if (store != null) {
             create("release") {
-                storeFile = file(releaseProps.getProperty("storeFile"))
-                storePassword = releaseProps.getProperty("storePassword")
-                keyAlias = releaseProps.getProperty("keyAlias")
-                keyPassword = releaseProps.getProperty("keyPassword")
+                storeFile = store
+                storePassword = releaseProps.getProperty("storePassword") ?: "jevrelease2026"
+                keyAlias = releaseProps.getProperty("keyAlias") ?: "jev"
+                keyPassword = releaseProps.getProperty("keyPassword") ?: "jevrelease2026"
             }
         }
     }

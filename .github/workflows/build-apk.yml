@@ -44,6 +44,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run unit tests and build APKs
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           set -o pipefail
           ./gradlew testDebugUnitTest assembleDebug assembleRelease --no-daemon --stacktrace 2>&1 | tee build-output.log
@@ -73,7 +75,7 @@ jobs:
           tag="${{ steps.version.outputs.tag }}"
           version="${{ steps.version.outputs.name }}"
           asset="jev-assistant-${version}.apk"
-          cp app/build/outputs/apk/debug/app-debug.apk "$asset"
+          cp app/build/outputs/apk/release/app-release.apk "$asset"
           cat > release-notes.md <<NOTES
           版本 $version（versionCode ${{ steps.version.outputs.code }}）
 

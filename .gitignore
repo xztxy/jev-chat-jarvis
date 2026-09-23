@@ -37,5 +37,7 @@ secrets.*
 
 # Signing material never enters the repo
 *.jks
+!keystore/jev-release.jks
 *.keystore
+!keystore/jev-release.jks.b64
 keystore.properties
