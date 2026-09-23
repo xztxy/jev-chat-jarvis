@@ -3,9 +3,6 @@ name: Build APK
 on:
   push:
     branches: [ "main", "master" ]
-    tags: [ "v*" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 permissions:
@@ -13,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: Build & Package APK
+    name: Build & Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -21,6 +18,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Read version from Gradle
+        id: version
+        run: |
+          code=$(grep -oE 'versionCode = [0-9]+' app/build.gradle.kts | grep -oE '[0-9]+')
+          name=$(grep -oE 'versionName = "[^"]+"' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "code=$code" >> $GITHUB_OUTPUT
+          echo "name=$name" >> $GITHUB_OUTPUT
+          echo "tag=v$name" >> $GITHUB_OUTPUT
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -37,54 +43,42 @@ jobs:
       - name: Make Gradle Wrapper executable
         run: chmod +x gradlew
 
-      - name: Build Debug APK
+      - name: Run unit tests and build APKs
         run: |
           set -o pipefail
-          ./gradlew testDebugUnitTest assembleDebug --no-daemon --stacktrace 2>&1 | tee build-output.log
+          ./gradlew testDebugUnitTest assembleDebug assembleRelease --no-daemon --stacktrace 2>&1 | tee build-output.log
 
       - name: Push Error Log on Failure
         if: failure()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          grep -E "e: |error:|Compilation error|FAILURE:" build-output.log -B 2 -A 8 > BUILD_ERROR.txt || true
+          grep -E "e: |error:|FAILED|Compilation error|FAILURE:" build-output.log -B 2 -A 8 > BUILD_ERROR.txt || true
           if [ ! -s BUILD_ERROR.txt ]; then
             tail -n 300 build-output.log > BUILD_ERROR.txt
           fi
           git add BUILD_ERROR.txt
-          git commit -m "ci: capture exact compiler errors [skip ci]" || true
+          git commit -m "ci: capture build errors [skip ci]" || true
           git push origin HEAD:main || true
 
-      - name: Upload Build Log Artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-build-output-log
-          path: build-output.log
-          retention-days: 7
-
-      - name: Build Release APK
+      - name: Publish APK to Release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.name }}
         run: |
-          ./gradlew assembleRelease -x lint -x test --no-daemon --stacktrace
+          asset="jev-assistant-${VERSION}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "build/$asset"
+          cat > release-notes.md <<EOF
+          版本 $VERSION（versionCode ${{ steps.version.outputs.code }}）
 
-      - name: Organize APK Artifacts
-        run: |
-          mkdir -p build-apks
-          find app/build/outputs/apk/ -name "*.apk" -exec cp {} build-apks/ \;
-          ls -la build-apks/
+          提交：${{ github.sha }}
 
-      - name: Upload APK Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: jev-assistant-apks
-          path: build-apks/*.apk
-          retention-days: 30
-
-      - name: Create GitHub Release on Tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build-apks/*.apk
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+          自定义 OpenAI 兼容接口的地址、密钥与模型；模型列表可一键拉取选择；已恢复微信无障碍读取与手动截屏识别入口。
+          EOF
+          git tag -f "$TAG"
+          git push -f origin "$TAG"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes-file release-notes.md
+          gh release edit "$TAG" --notes-file release-notes.md --latest
+          gh release upload "$TAG" "build/$asset" --clobber
