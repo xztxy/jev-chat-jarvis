@@ -31,6 +31,7 @@ class ApiCompatibilityTest {
                 .put("messages", JSONArray().put(JSONObject().put("role", "user").put("content", "测试")))
             val response = HttpJson.post("$base/responses", "test", body, Route.REPLY)
 
+            server.takeRequest()
             val sent = JSONObject(server.takeRequest().body.readUtf8())
             assertTrue(sent.has("input"))
             assertFalse(sent.has("messages"))
