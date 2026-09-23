@@ -63,22 +63,18 @@ jobs:
 
       - name: Publish APK to Release
         if: success()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.version.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.name }}
         run: |
-          asset="jev-assistant-${VERSION}.apk"
-          cp app/build/outputs/apk/debug/app-debug.apk "build/$asset"
+          tag="${{ steps.version.outputs.tag }}"
+          version="${{ steps.version.outputs.name }}"
+          asset="jev-assistant-${version}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$asset"
           cat > release-notes.md <<EOF
-          版本 $VERSION（versionCode ${{ steps.version.outputs.code }}）
+          版本 $version（versionCode ${{ steps.version.outputs.code }}）
 
           提交：${{ github.sha }}
 
           自定义 OpenAI 兼容接口的地址、密钥与模型；模型列表可一键拉取选择；已恢复微信无障碍读取与手动截屏识别入口。
           EOF
-          git tag -f "$TAG"
-          git push -f origin "$TAG"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes-file release-notes.md
-          gh release edit "$TAG" --notes-file release-notes.md --latest
-          gh release upload "$TAG" "build/$asset" --clobber
+          gh release delete "$tag" --yes --cleanup-tag || true
+          gh release create "$tag" --title "$tag" --notes-file release-notes.md "$asset"
+          gh release edit "$tag" --latest
