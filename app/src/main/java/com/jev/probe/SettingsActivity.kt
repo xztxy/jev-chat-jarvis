@@ -499,7 +499,7 @@ class SettingsActivity : AppCompatActivity() {
                     resultView.text = "成功拉取到 ${models.size} 个模型"
                     val items = models.toTypedArray()
                     androidx.appcompat.app.AlertDialog.Builder(this@SettingsActivity)
-                        .setTitle("$title（共 ${models.size} 个）")
+                        .setTitle("${title}（共 ${models.size} 个）")
                         .setItems(items) { _, which ->
                             val chosen = items[which]
                             onPicked(chosen)

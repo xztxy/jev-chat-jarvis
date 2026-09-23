@@ -29,7 +29,7 @@ class ApiException(
 
     companion object {
         fun buildMessage(route: String, status: Int?, snippet: String): String =
-            if (status != null) "$route HTTP $status：${snippet.take(120)}"
+            if (status != null) "$route HTTP ${status}：${snippet.take(120)}"
             else "$route 请求失败：${snippet.take(120)}"
     }
 }
