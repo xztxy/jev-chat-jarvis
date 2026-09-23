@@ -1,3 +1,4 @@
+import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -6,12 +7,16 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Release signing: reads a properties file kept OUTSIDE the repo
-// (storeFile / storePassword / keyAlias / keyPassword). Override the path with
-// the JEV_KEYSTORE_PROPS env var. Without it, release builds are unsigned.
+// Release signing: reads an optional properties file
+// (storeFile / storePassword / keyAlias / keyPassword) specified via JEV_KEYSTORE_PROPS.
 val releaseProps = Properties().apply {
-    val f = file(System.getenv("JEV_KEYSTORE_PROPS") ?: "H:/android/keys/jev-release.properties")
-    if (f.exists()) FileInputStream(f).use { load(it) }
+    val propPath = System.getenv("JEV_KEYSTORE_PROPS")
+    if (!propPath.isNullOrBlank()) {
+        val f = File(propPath)
+        if (f.exists()) {
+            FileInputStream(f).use { stream -> load(stream) }
+        }
+    }
 }
 
 android {

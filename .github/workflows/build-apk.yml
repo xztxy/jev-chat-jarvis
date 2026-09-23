@@ -39,19 +39,7 @@ jobs:
 
       - name: Build Debug & Release APK
         run: |
-          set -o pipefail
-          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee gradle-build.log
-          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee -a gradle-build.log
-
-      - name: Push Failure Log to Git Branch
-        if: failure()
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -B ci-build-log
-          git add gradle-build.log -f
-          git commit -m "ci: upload build failure log"
-          git push origin ci-build-log -f
+          ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace
 
       - name: Organize APK Artifacts
         run: |
