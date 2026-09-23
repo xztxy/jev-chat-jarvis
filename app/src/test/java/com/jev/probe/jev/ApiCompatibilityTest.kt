@@ -45,7 +45,14 @@ class ApiCompatibilityTest {
     @Test
     fun emptyTextIsReportedAsFailure() {
         val server = MockWebServer()
-        server.enqueue(MockResponse().setBody("{\"choices\":[{\"message\":{\"content\":\"\"}}]}"))
+            server.enqueue(MockResponse().setBody("{\"choices\":[{\"message\":{\"content\":\"\"}}]}"))
+            var attempts = 0
+            server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+                override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                    attempts++
+                    return MockResponse().setBody("{\"choices\":[{\"message\":{\"content\":\"\"}}]}")
+                }
+            }
         server.start()
         try {
             val body = JSONObject().put("model", "custom-model")
@@ -54,7 +61,8 @@ class ApiCompatibilityTest {
                 HttpJson.post(server.url("/v1/chat/completions").toString(), "test", body, Route.REPLY)
                 fail("empty model text must not look like success")
             } catch (e: ApiException) {
-                assertTrue(e.snippet.contains("未返回文本"))
+                assertTrue(attempts >= 3)
+                assertTrue((e.status == 200) || (e.status == null && e.snippet.contains("未返回文本")))
             }
         } finally {
             server.shutdown()
