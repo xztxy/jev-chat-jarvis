@@ -105,6 +105,93 @@ object HttpJson {
         throw last ?: ApiException(route, null, "请求失败")
     }
 
+    /**
+     * Shared GET-JSON helper.
+     */
+    fun get(
+        url: String,
+        key: String,
+        route: String,
+        extraHeaders: Map<String, String> = emptyMap()
+    ): JSONObject {
+        var conn: HttpURLConnection? = null
+        try {
+            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 15000
+                readTimeout = 25000
+                if (key.isNotBlank()) {
+                    setRequestProperty("Authorization", "Bearer $key")
+                }
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                extraHeaders.forEach { (k, v) -> setRequestProperty(k, v) }
+            }
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                val errText = readBody(conn.errorStream)
+                throw ApiException(route, code, errText.ifBlank { "（响应体为空）" })
+            }
+            val text = readBody(conn.inputStream)
+            if (text.isBlank()) throw ApiException(route, code, "响应体为空")
+            return JSONObject(text)
+        } catch (e: ApiException) {
+            throw e
+        } catch (e: Exception) {
+            throw ApiException(route, null, describe(e))
+        } finally {
+            conn?.disconnect()
+        }
+    }
+
+    /**
+     * Attempts to query /models or /v1/models given an OpenAI-compatible base URL.
+     * Returns a sorted list of model ID strings.
+     */
+    fun fetchModels(baseUrl: String, key: String, route: String = Route.REPLY): List<String> {
+        val cleanBase = baseUrl.trim().trimEnd('/')
+            .removeSuffix("/chat/completions")
+            .removeSuffix("/chat")
+        val endpoints = if (cleanBase.endsWith("/v1")) {
+            listOf("$cleanBase/models", cleanBase.removeSuffix("/v1") + "/models")
+        } else {
+            listOf("$cleanBase/models", "$cleanBase/v1/models")
+        }
+
+        var lastEx: Exception? = null
+        for (ep in endpoints) {
+            try {
+                val json = get(ep, key, route, headersFor(ep))
+                val list = ArrayList<String>()
+                val dataArr = json.optJSONArray("data")
+                if (dataArr != null) {
+                    for (i in 0 until dataArr.length()) {
+                        val item = dataArr.optJSONObject(i)
+                        val id = item?.optString("id")?.trim()
+                        if (!id.isNullOrEmpty()) list.add(id)
+                        else {
+                            val str = dataArr.optString(i)?.trim()
+                            if (!str.isNullOrEmpty()) list.add(str)
+                        }
+                    }
+                }
+                val modelsArr = json.optJSONArray("models")
+                if (modelsArr != null) {
+                    for (i in 0 until modelsArr.length()) {
+                        val item = modelsArr.optJSONObject(i)
+                        val id = item?.optString("id")?.ifEmpty { item.optString("name") }?.trim()
+                        if (!id.isNullOrEmpty()) list.add(id)
+                    }
+                }
+                if (list.isNotEmpty()) {
+                    return list.distinct().sorted()
+                }
+            } catch (e: Exception) {
+                lastEx = e
+            }
+        }
+        throw lastEx ?: ApiException(route, null, "未能从该接口获取到有效模型列表")
+    }
+
     /** Body text, or "" — a null stream or a read failure never costs us the status code. */
     private fun readBody(stream: java.io.InputStream?): String {
         stream ?: return ""

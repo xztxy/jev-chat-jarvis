@@ -218,6 +218,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
     fun judgeEndpoint(): String {
         val base = judgeBaseUrl.trim().trimEnd('/')
         return when (judgeProvider) {
+            PROVIDER_OPENAI -> "${base.removeSuffix("/chat/completions")}/chat/completions"
             PROVIDER_BOCHA -> "$base/v1/systemone"    // same path as TypeSafe
             PROVIDER_TYPESAFE -> "$base/v1/systemone"
             PROVIDER_CUSTOM -> judgeBaseUrl.trim()   // user supplies the full URL
@@ -277,6 +278,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         private const val K_BUBBLE_X = "bubble_x"
         private const val K_AUTO = "auto_analyze"
 
+        const val PROVIDER_OPENAI = "openai"
         const val PROVIDER_BOCHA = "bocha"
         const val PROVIDER_OPENROUTER = "openrouter"
         const val PROVIDER_TYPESAFE = "typesafe"
@@ -286,7 +288,8 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         const val OCR_VISION = "vision"
 
         // Judge route presets.
-        // Bocha Jev: same protocol/path as TypeSafe (/v1/systemone). Limited-time free.
+        const val DEFAULT_JUDGE_BASE_OPENAI = "https://api.deepseek.com/v1"
+        const val DEFAULT_JUDGE_MODEL_OPENAI = "deepseek-chat"
         const val DEFAULT_JUDGE_BASE_BOCHA = "https://jev.bocha.cn"
         const val DEFAULT_JUDGE_MODEL_BOCHA = "bocha-jev-v1"
         const val DEFAULT_JUDGE_BASE_OPENROUTER = "https://openrouter.ai/api"

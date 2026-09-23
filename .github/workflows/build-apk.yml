@@ -1,0 +1,63 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make Gradle Wrapper executable
+        run: chmod +x gradlew
+
+      - name: Build Debug & Release APK
+        run: |
+          ./gradlew assembleDebug assembleRelease --stacktrace
+
+      - name: Organize APK Artifacts
+        run: |
+          mkdir -p build-apks
+          cp app/build/outputs/apk/debug/*.apk build-apks/ || true
+          cp app/build/outputs/apk/release/*.apk build-apks/ || true
+          ls -la build-apks/
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jev-assistant-apks
+          path: build-apks/*.apk
+          retention-days: 30
+
+      - name: Create GitHub Release on Tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build-apks/*.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true

@@ -16,30 +16,6 @@
 
 </div>
 
-## ❤️赞助商
-
-> [想出现在这里？](#交流群--需求收集)
-
-<details open>
-<summary>点击折叠</summary>
-
-<table>
-<tr>
-<td width="240" align="center"><a href="https://open.bocha.cn"><img src="docs/images/sponsors/bocha.png" alt="博查" width="200"></a></td>
-<td>感谢 <b>博查</b> 赞助了本项目！博查是一个给 AI 用的搜索引擎，让你的 AI 应用连接世界知识，获得干净、准确、高质量的搜索结果。提供 Web Search API、Bocha Jev API 等多种联网搜索和模型服务。<a href="https://open.bocha.cn">open.bocha.cn</a></td>
-</tr>
-<tr>
-<td width="240" align="center"><a href="https://faka.rainlanguage.top"><img src="docs/images/sponsors/xiaoyou.png" alt="小优店铺" width="200"></a></td>
-<td>感谢 <b>小优店铺</b> 赞助了本项目！小优店铺是一家数字商品与账号服务店铺，为本项目的用户提供选购渠道。<a href="https://faka.rainlanguage.top">点此前往</a>。</td>
-</tr>
-<tr>
-<td width="240" align="center"><a href="https://agent.ai-tools.cn"><img src="docs/images/sponsors/vytal.jpg" alt="速创猫 Vytal" width="200"></a></td>
-<td>感谢 <b>速创猫 Vytal</b> 赞助了本项目！速创猫 Vytal 是专业的 AI 视频工作流平台，提供可批量复用的视频工作流，降低内容制作门槛，服务内容创作者、培训机构及中小团队。<a href="https://agent.ai-tools.cn">点此前往</a>。</td>
-</tr>
-</table>
-
-</details>
-
 ## 截图
 
 <table align="center">
@@ -250,42 +226,9 @@ JDK 17 + Android SDK（platform 35 / build-tools 35）。
 - **OCR 只认屏幕上看得见的部分**：长消息被截断的部分读不到；识别有错字。
 - **包体变大**：ML Kit 中文离线模型让 APK 从约 12 MB 增至约 27 MB，且只打 arm64-v8a。
 
-## 交流群 / 需求收集
+## 交流与反馈
 
-**如需联系，请公众号私信。** 合作、赞助、反馈、进群失败、二维码过期，都走公众号私信，其它渠道不一定看得到。
-
-<p align="center"><img src="docs/images/wechat-mp.png" width="180" alt="公众号二维码" /></p>
-
-想听真实需求：你在哪个聊天 App 上最想要这个副驾？希望它判断什么、怎么提示、什么绝对不能碰？扫码进群直接说。**1 至 7 群已满，不要再扫；8、9 群任选一个，请勿重复加入。**
-
-<table align="center"><tr>
-  <td align="center"><img src="docs/images/wechat-group-8.png" width="200" alt="8 群" /><br/><b>8 群</b></td>
-  <td align="center"><img src="docs/images/wechat-group-9.png" width="200" alt="9 群" /><br/><b>9 群</b></td>
-</tr></table>
-
-<p align="center"><sub>以下七群已满，请勿再扫：</sub></p>
-
-<table align="center"><tr>
-  <td align="center"><img src="docs/images/wechat-group-1.png" width="80" alt="1 群（已满）" /><br/><sub>1 群</sub></td>
-  <td align="center"><img src="docs/images/wechat-group-2.png" width="80" alt="2 群（已满）" /><br/><sub>2 群</sub></td>
-  <td align="center"><img src="docs/images/wechat-group-3.png" width="80" alt="3 群（已满）" /><br/><sub>3 群</sub></td>
-  <td align="center"><img src="docs/images/wechat-group-4.png" width="80" alt="4 群（已满）" /><br/><sub>4 群</sub></td>
-  <td align="center"><img src="docs/images/wechat-group-5.png" width="80" alt="5 群（已满）" /><br/><sub>5 群</sub></td>
-  <td align="center"><img src="docs/images/wechat-group-6.png" width="80" alt="6 群（已满）" /><br/><sub>6 群</sub></td>
-  <td align="center"><img src="docs/images/wechat-group-7.png" width="80" alt="7 群（已满）" /><br/><sub>7 群</sub></td>
-</tr></table>
-
-<p align="center"><sub>群二维码 7 天有效（本批到 2026-09-29），过期了公众号私信要新码。</sub></p>
-
-## 姊妹项目
-
-同在 [jev-chat](https://github.com/jev-chat) 组织下：
-
-- [Jev 聊天助手 macOS 版](https://github.com/jev-chat/jev-chat-mac)：微信消息意图识别悬浮窗，看屏 + 本地小模型判断意图和风险，再按话术生成回复候选，纯只读。
-- [Jev 聊天助手 Windows 版](https://github.com/jev-chat/jev-chat-windows)：微信 Windows 4.x 旁挂的回复辅助，窗口截图 + 本地离线 OCR，3 条候选一键填入，发送永远手动。
-- [微墨 WeChat Ink](https://github.com/Snowwit88/wechat-ink)：微信公众号写作、配图与排版助手，支持资料核验、学术风图文和草稿发布。
-
-隐私政策见 [PRIVACY.md](PRIVACY.md)（说明读取了什么、发给谁、存在哪里、怎么删除）。
+欢迎在 GitHub [Issues](https://github.com/xztxy/jev-chat-jarvis/issues) 提交反馈，提出功能建议或适配新的聊天客户端。
 
 ## 版权与许可
 
@@ -295,14 +238,4 @@ Copyright © 2026 Finderchangchang 与 jev-chat 贡献者。代码以 [MIT](LICE
 - **必须注明出处**：分发或商用时保留 LICENSE 与 NOTICE，并在产品「关于」页、说明文档或发布页写明来源。推荐写法：`基于 Jev 聊天助手（https://github.com/jev-chat/jev-chat-jarvis）二次开发`。
 - 不要用「Jev 聊天助手」「jev-chat」名称或 chatjevs.com 域名暗示由原作者出品或背书。
 
-**免责声明**：本项目只处理你自己设备上、你自己有权查看的聊天。请遵守微信、QQ、X、飞书等各软件的许可协议与当地法律法规，作者不对使用后果负责。
-
-## ☕ 请我喝杯咖啡
-
-如果你觉得我写的这玩意儿对你有点帮助，欢迎请我喝杯咖啡。咖啡因一到位，脑子就开始冒泡，源源不断地驱动我往前跑；哪天我更新得特别勤，说明这杯续上了 😄
-
-<p align="center">
-  <img src="docs/images/donate/wechat-donate-v3.png" width="260" alt="微信赞赏码（姓名已隐去）" />
-</p>
-
-<p align="center"><sub>随手支持，不用有压力；不支持也没关系，点个 Star 或提条建议同样能让我开心很久。</sub></p>
+**免责声明**：本项目只处理你自己设备上、你自己有权查看的聊天。请遵守各通讯软件的许可协议与当地法律法规，作者不对使用后果负责。

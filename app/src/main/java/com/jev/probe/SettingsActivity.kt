@@ -71,25 +71,25 @@ class SettingsActivity : AppCompatActivity() {
 
         // --- 判断接口（Jev） ---
         val judgeCard = card()
-        judgeCard.addView(cardTitle("判断接口（Jev）"))
-        judgeCard.addView(text("读对方消息、给意图判断和候选排序。必须配置。", 12f, sub))
+        judgeCard.addView(cardTitle("判断接口（意图与排序）"))
+        judgeCard.addView(text("读对方消息、深度意图判断和候选排序。支持通用 OpenAI / DeepSeek 接口。", 12f, sub))
 
-        val judgeBaseEdit = edit(prefs.judgeBaseUrl, Prefs.DEFAULT_JUDGE_BASE_OPENROUTER)
-        val judgeModelEdit = edit(prefs.judgeModel, Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER)
+        val judgeBaseEdit = edit(prefs.judgeBaseUrl, Prefs.DEFAULT_JUDGE_BASE_OPENAI)
+        val judgeModelEdit = edit(prefs.judgeModel, Prefs.DEFAULT_JUDGE_MODEL_OPENAI)
         judgeProviderIdx = when (prefs.judgeProvider) {
-            Prefs.PROVIDER_BOCHA -> 0
+            Prefs.PROVIDER_OPENAI -> 0
             Prefs.PROVIDER_OPENROUTER -> 1
-            Prefs.PROVIDER_TYPESAFE -> 2
+            Prefs.PROVIDER_TYPESAFE, Prefs.PROVIDER_BOCHA -> 2
             Prefs.PROVIDER_CUSTOM -> 3
             else -> 0
         }
         judgeCard.addView(pills(
-            listOf("博查 Jev", "OpenRouter", "TypeSafe 直连", "自定义"), judgeProviderIdx) { idx ->
+            listOf("通用 OpenAI/DeepSeek", "OpenRouter", "TypeSafe/Bocha", "自定义"), judgeProviderIdx) { idx ->
             judgeProviderIdx = idx
             when (idx) {
                 0 -> {
-                    judgeBaseEdit.setText(Prefs.DEFAULT_JUDGE_BASE_BOCHA)
-                    judgeModelEdit.setText(Prefs.DEFAULT_JUDGE_MODEL_BOCHA)
+                    judgeBaseEdit.setText(Prefs.DEFAULT_JUDGE_BASE_OPENAI)
+                    judgeModelEdit.setText(Prefs.DEFAULT_JUDGE_MODEL_OPENAI)
                 }
                 1 -> {
                     judgeBaseEdit.setText(Prefs.DEFAULT_JUDGE_BASE_OPENROUTER)
@@ -99,44 +99,25 @@ class SettingsActivity : AppCompatActivity() {
                     judgeBaseEdit.setText(Prefs.DEFAULT_JUDGE_BASE_TYPESAFE)
                     judgeModelEdit.setText(Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE)
                 }
-                // Custom POSTs the box verbatim, so a preset HOST left in the box
-                // would hit the API root. Expand it into the full endpoint the
-                // preset would have used; anything hand-typed is left alone.
                 3 -> judgeBaseEdit.setText(expandJudgeUrl(judgeBaseEdit.text.toString()))
             }
         })
         judgeCard.addView(label("Base URL"))
         judgeCard.addView(judgeBaseEdit)
-        judgeCard.addView(text("博查 Jev / TypeSafe 拼 /v1/systemone；OpenRouter 拼 /alpha/decisions；自定义按原样 POST。",
+        judgeCard.addView(text("通用 OpenAI 拼 /chat/completions；OpenRouter 拼 /alpha/decisions；TypeSafe 拼 /v1/systemone；自定义按原样 POST。",
             11f, sub))
-        // Bocha official address + one-tap copy (limited-time free).
-        val bochaRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(10), 0, dp(2))
-        }
-        bochaRow.addView(text("${Prefs.DEFAULT_JUDGE_BASE_BOCHA}（限时免费）", 12.5f, ink).apply {
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        bochaRow.addView(TextView(this).apply {
-            text = "复制"; textSize = 13f; gravity = Gravity.CENTER
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(accent); background = round(dp(10), Color.WHITE, stroke = true)
-            setPadding(dp(16), dp(6), dp(16), dp(6))
-            setOnClickListener {
-                val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                cm.setPrimaryClip(android.content.ClipData.newPlainText(
-                    "jev_bocha", Prefs.DEFAULT_JUDGE_BASE_BOCHA))
-                Toast.makeText(this@SettingsActivity, "已复制", Toast.LENGTH_SHORT).show()
-            }
-        })
-        judgeCard.addView(bochaRow)
-        judgeCard.addView(text("去 jev.bocha.cn 领取限时免费 API Key", 11f, sub))
         judgeCard.addView(label("密钥"))
         judgeCard.addView(edit(prefs.judgeKey, "sk-...", password = true).also { judgeKeyEdit = it })
         judgeCard.addView(label("模型"))
         judgeCard.addView(judgeModelEdit)
         val judgeResult = resultText()
+        judgeCard.addView(cardBtn("从接口拉取并选择模型") {
+            val base = judgeBaseEdit.text.toString().trim()
+            val key = judgeKeyEdit.text.toString().trim()
+            showModelPicker("选择判断模型", base, key, Route.JUDGE, judgeResult) { picked ->
+                judgeModelEdit.setText(picked)
+            }
+        })
         judgeCard.addView(cardBtn("测试判断") {
             val base = judgeBaseEdit.text.toString().trim()
             val key = judgeKeyEdit.text.toString().trim()
@@ -204,6 +185,13 @@ class SettingsActivity : AppCompatActivity() {
         replyCard.addView(label("模型"))
         replyCard.addView(replyModelEdit)
         val replyResult = resultText()
+        replyCard.addView(cardBtn("从接口拉取并选择模型") {
+            val base = replyBaseEdit.text.toString().trim()
+            val key = replyKeyEdit.text.toString().trim().ifBlank { judgeKeyEdit.text.toString().trim() }
+            showModelPicker("选择回复模型", base, key, Route.REPLY, replyResult) { picked ->
+                replyModelEdit.setText(picked)
+            }
+        })
         replyCard.addView(cardBtn("测试回复") {
             val base = replyBaseEdit.text.toString().trim()
             val model = replyModelEdit.text.toString().trim()
@@ -257,6 +245,15 @@ class SettingsActivity : AppCompatActivity() {
         visionCard.addView(label("模型"))
         visionCard.addView(visionModelEdit)
         val visionResult = resultText()
+        visionCard.addView(cardBtn("从接口拉取并选择模型") {
+            val base = visionBaseEdit.text.toString().trim()
+            val key = visionKeyEdit.text.toString().trim().ifBlank {
+                replyKeyEdit.text.toString().trim().ifBlank { judgeKeyEdit.text.toString().trim() }
+            }
+            showModelPicker("选择视觉模型", base, key, Route.VISION, visionResult) { picked ->
+                visionModelEdit.setText(picked)
+            }
+        })
         visionCard.addView(cardBtn("测试视觉") {
             val visionBase = visionBaseEdit.text.toString().trim()
             if (!VisionClient.supportsVision(visionBase.ifBlank { Prefs.DEFAULT_VISION_BASE })) {
@@ -435,20 +432,19 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var visionKeyEdit: EditText
 
     private fun providerOf(idx: Int) = when (idx) {
-        0 -> Prefs.PROVIDER_BOCHA
+        0 -> Prefs.PROVIDER_OPENAI
+        1 -> Prefs.PROVIDER_OPENROUTER
         2 -> Prefs.PROVIDER_TYPESAFE
         3 -> Prefs.PROVIDER_CUSTOM
-        else -> Prefs.PROVIDER_OPENROUTER
+        else -> Prefs.PROVIDER_OPENAI
     }
 
     /**
-     * The provider actually implied by what is in the address box. A preset host
-     * carries its own path (`/alpha/decisions`, `/v1/systemone`), so leaving that
-     * host in the box while the pill says something else would POST the wrong
-     * path — or, for custom, the bare API root.
+     * The provider actually implied by what is in the address box.
      */
     private fun resolveJudgeProvider(idx: Int, base: String): String =
         when (base.trim().trimEnd('/')) {
+            Prefs.DEFAULT_JUDGE_BASE_OPENAI -> Prefs.PROVIDER_OPENAI
             Prefs.DEFAULT_JUDGE_BASE_BOCHA -> Prefs.PROVIDER_BOCHA
             Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> Prefs.PROVIDER_OPENROUTER
             Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> Prefs.PROVIDER_TYPESAFE
@@ -457,6 +453,7 @@ class SettingsActivity : AppCompatActivity() {
 
     /** The full endpoint a preset host would have been expanded to. */
     private fun expandJudgeUrl(base: String): String = when (base.trim().trimEnd('/')) {
+        Prefs.DEFAULT_JUDGE_BASE_OPENAI -> Prefs.DEFAULT_JUDGE_BASE_OPENAI + "/chat/completions"
         Prefs.DEFAULT_JUDGE_BASE_BOCHA -> Prefs.DEFAULT_JUDGE_BASE_BOCHA + "/v1/systemone"
         Prefs.DEFAULT_JUDGE_BASE_OPENROUTER -> Prefs.DEFAULT_JUDGE_BASE_OPENROUTER + "/alpha/decisions"
         Prefs.DEFAULT_JUDGE_BASE_TYPESAFE -> Prefs.DEFAULT_JUDGE_BASE_TYPESAFE + "/v1/systemone"
@@ -464,15 +461,59 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun defaultJudgeBase(provider: String): String = when (provider) {
+        Prefs.PROVIDER_OPENAI -> Prefs.DEFAULT_JUDGE_BASE_OPENAI
         Prefs.PROVIDER_BOCHA -> Prefs.DEFAULT_JUDGE_BASE_BOCHA
         Prefs.PROVIDER_TYPESAFE -> Prefs.DEFAULT_JUDGE_BASE_TYPESAFE
         else -> Prefs.DEFAULT_JUDGE_BASE_OPENROUTER
     }
 
     private fun defaultJudgeModel(provider: String): String = when (provider) {
+        Prefs.PROVIDER_OPENAI -> Prefs.DEFAULT_JUDGE_MODEL_OPENAI
         Prefs.PROVIDER_BOCHA -> Prefs.DEFAULT_JUDGE_MODEL_BOCHA
         Prefs.PROVIDER_TYPESAFE -> Prefs.DEFAULT_JUDGE_MODEL_TYPESAFE
         else -> Prefs.DEFAULT_JUDGE_MODEL_OPENROUTER
+    }
+
+    private fun showModelPicker(
+        title: String,
+        baseUrl: String,
+        key: String,
+        route: String,
+        resultView: TextView,
+        onPicked: (String) -> Unit
+    ) {
+        val cleanUrl = baseUrl.trim()
+        if (cleanUrl.isBlank()) {
+            resultView.text = "请先填写 Base URL"
+            return
+        }
+        resultView.text = "正在拉取模型列表…"
+        worker.execute {
+            try {
+                val models = com.jev.probe.jev.HttpJson.fetchModels(cleanUrl, key, route)
+                main.post {
+                    if (models.isEmpty()) {
+                        resultView.text = "未在该接口下发现可用模型"
+                        return@post
+                    }
+                    resultView.text = "成功拉取到 ${models.size} 个模型"
+                    val items = models.toTypedArray()
+                    androidx.appcompat.app.AlertDialog.Builder(this@SettingsActivity)
+                        .setTitle("$title（共 ${models.size} 个）")
+                        .setItems(items) { _, which ->
+                            val chosen = items[which]
+                            onPicked(chosen)
+                            Toast.makeText(this@SettingsActivity, "已选择：$chosen", Toast.LENGTH_SHORT).show()
+                        }
+                        .setNegativeButton("取消", null)
+                        .show()
+                }
+            } catch (e: Exception) {
+                main.post {
+                    resultView.text = "拉取模型失败：${e.message ?: e.javaClass.simpleName}"
+                }
+            }
+        }
     }
 
     /**
@@ -647,7 +688,7 @@ class SettingsActivity : AppCompatActivity() {
         private const val SCRATCH_REPLY = "jev_probe_scratch_reply"
         private const val SCRATCH_VISION = "jev_probe_scratch_vision"
 
-        private const val PRIVACY_URL = "https://chatjevs.com/privacy.html"
-        private const val REPO_URL = "https://github.com/jev-chat/jev-chat-jarvis"
+        private const val PRIVACY_URL = "https://github.com/xztxy/jev-chat-jarvis/blob/main/PRIVACY.md"
+        private const val REPO_URL = "https://github.com/xztxy/jev-chat-jarvis"
     }
 }
