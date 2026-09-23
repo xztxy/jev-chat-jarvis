@@ -39,7 +39,26 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          ./gradlew assembleDebug -x lint -x test --no-daemon --stacktrace
+          set -o pipefail
+          ./gradlew assembleDebug -x lint -x test --no-daemon --stacktrace 2>&1 | tee build-output.log
+
+      - name: Push Error Log on Failure
+        if: failure()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          tail -n 200 build-output.log > BUILD_ERROR.txt
+          git add BUILD_ERROR.txt
+          git commit -m "ci: build failed, capture output [skip ci]" || true
+          git push origin HEAD:main || true
+
+      - name: Upload Build Log Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-output-log
+          path: build-output.log
+          retention-days: 7
 
       - name: Build Release APK
         continue-on-error: true
