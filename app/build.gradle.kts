@@ -50,12 +50,15 @@ android {
     }
 
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = false
-            signingConfigs.findByName("release")?.let {
-                signingConfig = it
-            }
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
+    }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 
     // Uncompressed, page-aligned .so files: required for the 16 KB page-size

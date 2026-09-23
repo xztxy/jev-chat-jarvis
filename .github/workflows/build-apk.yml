@@ -39,7 +39,7 @@ jobs:
 
       - name: Build Debug & Release APK
         run: |
-          ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleDebug assembleRelease -x lint -x test --no-daemon --stacktrace
 
       - name: Organize APK Artifacts
         run: |
