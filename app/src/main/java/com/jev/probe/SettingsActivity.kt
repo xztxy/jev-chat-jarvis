@@ -28,6 +28,7 @@ import com.jev.probe.core.kb.KbSelfCheck
 import com.jev.probe.core.kb.KbStore
 import com.jev.probe.jev.JudgeClient
 import com.jev.probe.jev.ReplyClient
+import com.jev.probe.jev.Route
 import com.jev.probe.jev.VisionClient
 import java.util.concurrent.Executors
 import kotlin.math.roundToInt
