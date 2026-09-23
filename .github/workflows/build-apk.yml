@@ -47,9 +47,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          tail -n 200 build-output.log > BUILD_ERROR.txt
+          grep -E "e: |error:|Compilation error|FAILURE:" build-output.log -B 2 -A 8 > BUILD_ERROR.txt || true
+          if [ ! -s BUILD_ERROR.txt ]; then
+            tail -n 300 build-output.log > BUILD_ERROR.txt
+          fi
           git add BUILD_ERROR.txt
-          git commit -m "ci: build failed, capture output [skip ci]" || true
+          git commit -m "ci: capture exact compiler errors [skip ci]" || true
           git push origin HEAD:main || true
 
       - name: Upload Build Log Artifact

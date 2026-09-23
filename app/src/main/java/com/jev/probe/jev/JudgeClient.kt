@@ -71,7 +71,7 @@ class JudgeClient(private val prefs: Prefs) {
 
     private fun rankWithOpenAi(candidates: List<String>): List<RankedReply> =
         candidates.mapIndexed { idx, reply ->
-            RankedReply(reply, 1.0 - (idx * 0.1), idx)
+            RankedReply(reply, 1.0 - (idx * 0.1))
         }
 
     private fun judgeWithOpenAi(
