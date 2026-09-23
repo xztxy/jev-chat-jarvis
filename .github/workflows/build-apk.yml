@@ -29,16 +29,31 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Accept Android SDK licenses
+      - name: Setup Android SDK Platform 35
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0" 2>/dev/null || true
 
       - name: Make Gradle Wrapper executable
         run: chmod +x gradlew
 
       - name: Build Debug & Release APK
+        id: gradle_build
         run: |
-          ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace
+          set -o pipefail
+          ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace 2>&1 | tee gradle-build.log
+
+      - name: Report Build Error Log
+        if: failure()
+        run: |
+          echo "### Gradle Build Log" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          if [ -f gradle-build.log ]; then
+            tail -n 120 gradle-build.log >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No log generated." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Organize APK Artifacts
         run: |
