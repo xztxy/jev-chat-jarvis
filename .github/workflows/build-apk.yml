@@ -38,22 +38,20 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Debug & Release APK
-        id: gradle_build
         run: |
           set -o pipefail
-          ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace 2>&1 | tee gradle-build.log
+          ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee gradle-build.log
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee -a gradle-build.log
 
-      - name: Report Build Error Log
+      - name: Push Failure Log to Git Branch
         if: failure()
         run: |
-          echo "### Gradle Build Log" >> $GITHUB_STEP_SUMMARY
-          echo '```text' >> $GITHUB_STEP_SUMMARY
-          if [ -f gradle-build.log ]; then
-            tail -n 120 gradle-build.log >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No log generated." >> $GITHUB_STEP_SUMMARY
-          fi
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B ci-build-log
+          git add gradle-build.log -f
+          git commit -m "ci: upload build failure log"
+          git push origin ci-build-log -f
 
       - name: Organize APK Artifacts
         run: |
