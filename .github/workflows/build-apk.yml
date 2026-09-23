@@ -29,21 +29,21 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
 
       - name: Make Gradle Wrapper executable
         run: chmod +x gradlew
 
       - name: Build Debug & Release APK
         run: |
-          ./gradlew assembleDebug assembleRelease --stacktrace
+          ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace
 
       - name: Organize APK Artifacts
         run: |
           mkdir -p build-apks
-          cp app/build/outputs/apk/debug/*.apk build-apks/ || true
-          cp app/build/outputs/apk/release/*.apk build-apks/ || true
+          find app/build/outputs/apk/ -name "*.apk" -exec cp {} build-apks/ \;
           ls -la build-apks/
 
       - name: Upload APK Artifacts
