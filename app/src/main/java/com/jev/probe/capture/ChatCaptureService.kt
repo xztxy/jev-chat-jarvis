@@ -98,7 +98,17 @@ open class ChatCaptureService : AccessibilityService() {
         prefs = Prefs(this)
         overlay = OverlayController(this)
         overlay?.onManualAnalyze = {
-            currentSnapshot?.let { pendingSnapshot = it; runAnalysis() }
+            val snapshot = currentSnapshot
+            val pkg = rootInActiveWindow?.packageName?.toString()
+            when {
+                snapshot == null && pkg == PKG_WECHAT ->
+                    overlay?.showNotice("微信里没有可读的会话内容。可长按悬浮球选择手动截屏识别。")
+                snapshot == null ->
+                    overlay?.showNotice("还没有读到当前会话，先打开聊天窗口再试。")
+                pkg != null && activePkg != null && pkg != activePkg ->
+                    overlay?.showNotice("已切换应用，正在重新读取当前会话，稍等一下再分析。")
+                else -> { pendingSnapshot = snapshot; runAnalysis() }
+            }
         }
         // Bubble menu: file the open conversation as a knowledge-base contact.
         // Contacts are never created automatically — this is the one-tap way in.
@@ -175,10 +185,18 @@ open class ChatCaptureService : AccessibilityService() {
     private fun maybeCapture() {
         val root = rootInActiveWindow ?: return
         val pkg = root.packageName?.toString()
-        // WeChat is fully disabled — no tree read, no screenshot, no OCR, no fill.
-        // A content-changed / scrolled event in WeChat only re-shows the one-time
-        // notice (deduped); it must never reach an adapter or the OCR path.
-        // WeChat follows the normal adapter path; hidden nodes are not bypassed.
+        // Any package change invalidates the previous app's snapshot BEFORE the
+        // early returns below. WeChat (empty read) and every not-in-a-chat-window
+        // case used to return first, leaving currentSnapshot pointing at the app
+        // the user had just left — so "分析当前对话" analyzed the previous chat.
+        if (pkg != null && pkg != activePkg) {
+            activePkg = pkg
+            lastSignature = ""
+            lastOcrSignature = ""
+            currentSnapshot = null
+            pendingSnapshot = null
+            main.post { overlay?.resetForNewConversation() }
+        }
         wechatNoticeShown = false // any other foreground → allow the notice again next WeChat visit
         // Apps with no adapter are never handled automatically (v1.3 revision):
         // the only way in for them is the bubble menu's "截屏识别一次".
